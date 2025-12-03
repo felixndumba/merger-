@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Excel to PDF Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-8">
+
+<div class="max-w-3xl mx-auto bg-white p-8 shadow rounded-lg">
+    <h1 class="text-3xl font-bold text-blue-600 mb-6">Excel → PDF Converter</h1>
+
+    <!-- Upload -->
+    <input type="file" id="excelFiles" multiple accept=".xlsx,.xls"
+           class="border rounded p-3 w-full mb-4">
+
+    <button onclick="convertFiles()"
+        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        Convert
+    </button>
+
+    <!-- Preview Section -->
+    <h2 class="text-xl font-semibold mt-8">Converted PDFs</h2>
+    <div id="previewArea" class="grid grid-cols-2 gap-4 mt-3"></div>
+
+    <!-- Merge Section -->
+    <input type="text" id="mergedName" placeholder="Merged file name"
+           class="border p-2 w-full rounded mt-6 mb-3">
+
+    <button onclick="mergePDFs()"
+        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        Merge & Download
+    </button>
+</div>
+
+<script>
+    let convertedPDFs = [];
+
+    async function convertFiles() {
+        const files = document.getElementById("excelFiles").files;
+        if (!files.length) return alert("Upload Excel files first.");
+
+        const formData = new FormData();
+        for (let f of files) formData.append("excelFiles", f);
+
+        const res = await fetch("/convert", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+        convertedPDFs = data.pdfs;
+
+        displayPreviews();
+    }
+
+    function displayPreviews() {
+        const preview = document.getElementById("previewArea");
+        preview.innerHTML = "";
+
+        convertedPDFs.forEach(pdf => {
+            preview.innerHTML += `
+                <div class="border p-2 rounded bg-gray-50">
+                    <embed src="/output/${pdf}" type="application/pdf" class="w-full h-64" />
+
+                    <label class="flex items-center mt-2">
+                        <input type="checkbox" value="${pdf}" class="mr-2 pdf-check">
+                        Select for merge
+                    </label>
+                </div>
+            `;
+        });
+    }
+
+async function mergePDFs() {
+    const mergedName = document.getElementById("mergedName").value.trim();
+    if (!mergedName) return alert("Enter a merge name.");
+
+    const selected = [...document.querySelectorAll(".pdf-check:checked")].map(c => c.value);
+    if (!selected.length) return alert("Select PDFs to merge.");
+
+    try {
+        const res = await fetch("/merge", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pdfs: selected, mergedName })
+        });
+
+        if (!res.ok) throw new Error("Failed to merge PDFs");
+
+        const data = await res.json();
+
+        if (data.success && data.file) {
+            // Direct download
+            const link = document.createElement("a");
+            link.href = data.file;
+            link.download = mergedName + ".pdf";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            alert("Merge failed. Try again.");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("An error occurred while merging PDFs.");
+    }
+}
+
+</script>
+
+</body>
+</html>
