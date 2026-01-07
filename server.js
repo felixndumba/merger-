@@ -16,7 +16,7 @@ const upload = multer({ dest: "uploads/" });
 // Ensure output folder exists
 if (!fs.existsSync("output")) fs.mkdirSync("output");
 
-// Convert Excel → PDF using LibreOffice
+// Convert Excel using LibreOffice
 app.post("/convert", upload.array("excelFiles"), async (req, res) => {
     const pdfs = [];
 
@@ -51,7 +51,7 @@ app.post("/convert", upload.array("excelFiles"), async (req, res) => {
     }
 });
 
-// Merge PDFs
+
 app.post("/merge", async (req, res) => {
     const { pdfs, mergedName } = req.body;
     if (!pdfs || !pdfs.length || !mergedName) {
@@ -78,7 +78,7 @@ app.post("/merge", async (req, res) => {
     }
 });
 
-// Default route
+
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
